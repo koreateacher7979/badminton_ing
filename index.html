@@ -459,9 +459,31 @@
 
         // Global App State
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'badminton-app-default';
+        
+        // =====================================================================
+        // 🚨🚨🚨 [매우 중요: 시스템 작동 원리와 깃허브 에러 해결 방법] 🚨🚨🚨
+        //
+        // 1. 왜 구글 시트로 바로 연결하지 않나요?
+        // -> 웹 브라우저(HTML)에서 구글 시트에 직접 데이터를 쓰려면 보안 비밀번호가 코드에 노출되어 해킹 위험이 큽니다.
+        // -> 또한, 구글 시트는 반응 속도가 느려 0.1초 단위로 바뀌는 배드민턴 코트 배정 현황판으로는 부적합합니다.
+        // 
+        // 2. 그럼 데이터는 어떻게 이동하나요?
+        // -> [스마트폰 QR 입력] -> [구글 파이어베이스(빠르고 안전함)] -> [관리자 화면 즉시 반영]
+        // -> 구글 시트에 기록하고 싶을 때는 관리자 화면 우측 상단의 [CSV 데이터 추출]을 눌러 파일로 받은 뒤 구글 시트에 붙여넣으시면 됩니다.
+        //
+        // 3. 깃허브에서 "파이어베이스 설정이 없다"고 에러가 나는 이유는?
+        // -> 아래 코드에 있는 'YOUR_API_KEY', 'YOUR_PROJECT_ID'라는 가짜 영문자들을 
+        //    선생님께서 직접 만드신 파이어베이스 프로젝트의 '진짜 설정값'으로 바꾸지 않으셨기 때문입니다.
+        // -> 따옴표(" ")는 지우지 마시고, 안의 내용만 선생님의 파이어베이스 설정값으로 변경 후 깃허브에 다시 저장해주세요!
+        // =====================================================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            // Mock config for local testing if env not provided. 
-            // In the real environment, this is injected by the prompt constraints.
+            // ↓ 아래 항목들을 선생님의 파이어베이스 설정값으로 교체하세요 ↓
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
 
         let app, auth, db, user;
@@ -484,8 +506,8 @@
         // ==========================================
         async function init() {
             try {
-                if(Object.keys(firebaseConfig).length === 0) {
-                    showToast("Firebase 설정이 없습니다.", "error");
+                if(!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+                    showToast("소스코드 하단의 Firebase 설정(apiKey 등)을 본인 것으로 수정해주세요.", "error");
                     return;
                 }
                 app = initializeApp(firebaseConfig);
