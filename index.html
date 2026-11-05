@@ -96,42 +96,56 @@
                 const fetchSettings = async () => {
                     try {
                         console.log("구글 시트(설정) 데이터 연동 시도 중...");
-                        const response = await fetch('https://docs.google.com/spreadsheets/d/195_S4M35HMyitcT1NFh9_fzHAT22u72_AL4sFzxmHzY/gviz/tq?tqx=out:csv&sheet=설정');
+                        // gviz API 대신 원본 CSV 다운로드 방식을 사용하여 데이터 누락 및 행 밀림 현상을 방지합니다.
+                        const response = await fetch('https://docs.google.com/spreadsheets/d/195_S4M35HMyitcT1NFh9_fzHAT22u72_AL4sFzxmHzY/export?format=csv&gid=0');
                         if (!response.ok) throw new Error("네트워크 응답이 올바르지 않습니다.");
                         
                         const text = await response.text();
                         
-                        // 안정적인 CSV 파싱
+                        // 가장 안정적인 CSV 파싱 (쉼표 처리 및 줄바꿈 처리 보강)
+                        // 빈 줄을 함부로 삭제하지 않아 엑셀 시트의 줄 번호(Row Index)와 100% 일치하게 만듭니다.
                         const rows = text.split('\n').map(row => {
-                            return row.split(',').map(cell => cell.replace(/^"|"$/g, '').trim());
-                        }).filter(row => row.length > 0 && row[0] !== "");
+                            const cols = [];
+                            let inQuotes = false;
+                            let current = '';
+                            for (let i = 0; i < row.length; i++) {
+                                if (row[i] === '"') { inQuotes = !inQuotes; continue; }
+                                if (row[i] === ',' && !inQuotes) { cols.push(current.trim()); current = ''; continue; }
+                                current += row[i];
+                            }
+                            cols.push(current.trim());
+                            return cols.map(c => c.replace(/\r/g, '')); // 캐리지 리턴 문자 제거
+                        });
                         
                         if (rows.length > 1) {
-                            const adminPin = rows[1][0] || DEFAULT_SETTINGS.adminPin; // A열
-                            const clubName = rows[1][1] || DEFAULT_SETTINGS.clubName; // B열
+                            // 2행 (인덱스 1) 데이터에서 인증번호(A2)와 클럽명(B2) 추출
+                            const adminPin = rows[1][0] || DEFAULT_SETTINGS.adminPin; 
+                            const clubName = rows[1][1] || DEFAULT_SETTINGS.clubName; 
                             
                             const ageGroups = [];
                             const levels = [];
                             const genders = [];
                             
+                            // 2행부터 마지막 행까지 돌면서 데이터 추출
                             for (let i = 1; i < rows.length; i++) {
-                                if (rows[i][3]) ageGroups.push(rows[i][3]); // D열
-                                if (rows[i][4]) levels.push(rows[i][4]);    // E열
-                                if (rows[i][5]) genders.push(rows[i][5]);   // F열
+                                // D열 (인덱스 3), E열 (인덱스 4), F열 (인덱스 5)
+                                if (rows[i][3] && rows[i][3] !== "") ageGroups.push(rows[i][3]);
+                                if (rows[i][4] && rows[i][4] !== "") levels.push(rows[i][4]);
+                                if (rows[i][5] && rows[i][5] !== "") genders.push(rows[i][5]);
                             }
 
                             setSettings(prev => ({
                                 ...prev,
-                                adminPin,
-                                clubName,
+                                adminPin: adminPin,
+                                clubName: clubName,
                                 ageGroups: ageGroups.length > 0 ? Array.from(new Set(ageGroups)) : prev.ageGroups,
                                 levels: levels.length > 0 ? Array.from(new Set(levels)) : prev.levels,
                                 genders: genders.length > 0 ? Array.from(new Set(genders)) : prev.genders
                             }));
-                            console.log("구글 시트 [설정] 연동 완료!");
+                            console.log("구글 시트 연동 완료! 클럽명:", clubName);
                         }
                     } catch (error) {
-                        console.error("구글 시트 연동 실패 (시트 공유설정을 확인하세요):", error);
+                        console.error("구글 시트 연동 실패:", error);
                     }
                 };
                 
