@@ -244,20 +244,15 @@
                 // 구글 시트 [참가자] 시트에 추가 요청 (Apps Script 통신)
                 if (SCRIPT_URL) {
                     try {
-                        const params = new URLSearchParams({
+                        const qs = new URLSearchParams({
                             action: 'add',
                             id: newPlayer.id,
                             name: newPlayer.name,
                             age: newPlayer.age,
                             level: newPlayer.level,
                             gender: newPlayer.gender
-                        });
-                        fetch(SCRIPT_URL, {
-                            method: 'POST',
-                            mode: 'no-cors',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: params
-                        });
+                        }).toString();
+                        fetch(`${SCRIPT_URL}?${qs}`, { method: 'GET', mode: 'no-cors' });
                     } catch (err) { console.error(err); }
                 }
             };
@@ -277,16 +272,11 @@
                     // 구글 시트 [참가자] 시트에서 삭제 요청 (Apps Script 통신)
                     if (SCRIPT_URL) {
                         try {
-                            const params = new URLSearchParams({
+                            const qs = new URLSearchParams({
                                 action: 'delete',
                                 id: id
-                            });
-                            fetch(SCRIPT_URL, {
-                                method: 'POST',
-                                mode: 'no-cors',
-                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                body: params
-                            });
+                            }).toString();
+                            fetch(`${SCRIPT_URL}?${qs}`, { method: 'GET', mode: 'no-cors' });
                         } catch (err) { console.error(err); }
                     }
                 }
