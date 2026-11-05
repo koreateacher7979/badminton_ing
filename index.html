@@ -219,8 +219,16 @@
             }, [isMobileMode]);
 
             // --- Handlers ---
-            const handleRegisterPlayer = (e) => {
+            const handleRegisterPlayer = async (e) => {
                 e.preventDefault();
+                
+                // 모바일 환경 등에서 중복 제출을 방지하고 상태를 표시합니다.
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 전송 중...';
+                }
+
                 const formData = new FormData(e.target);
                 const newPlayer = {
                     id: Date.now().toString(),
@@ -234,13 +242,6 @@
                     status: 'waiting' // waiting, resting, playing
                 };
                 
-                if (!isMobileMode) {
-                    setPlayers([...players, newPlayer]);
-                    setShowRegister(false);
-                } else {
-                    setMobileRegComplete(true);
-                }
-                
                 // 구글 시트 [참가자] 시트에 추가 요청 (Apps Script 통신)
                 if (SCRIPT_URL) {
                     try {
@@ -252,8 +253,17 @@
                             level: newPlayer.level,
                             gender: newPlayer.gender
                         }).toString();
-                        fetch(`${SCRIPT_URL}?${qs}`, { method: 'GET', mode: 'no-cors' });
+                        
+                        // [핵심] 모바일 브라우저에서 화면 전환 시 통신이 끊기는 현상을 방지하기 위해 await 사용
+                        await fetch(`${SCRIPT_URL}?${qs}`, { method: 'GET', mode: 'no-cors' });
                     } catch (err) { console.error(err); }
+                }
+
+                if (!isMobileMode) {
+                    setPlayers([...players, newPlayer]);
+                    setShowRegister(false);
+                } else {
+                    setMobileRegComplete(true);
                 }
             };
 
@@ -263,8 +273,7 @@
                     setSelectedForMatch(selectedForMatch.filter(pid => pid !== id));
                 }
             };
-
-            const handleRemovePlayer = (id) => {
+            const handleRemovePlayer = async (id) => {
                 if(confirm("정말 퇴장처리 하시겠습니까?")) {
                     setPlayers(players.filter(p => p.id !== id));
                     setSelectedForMatch(selectedForMatch.filter(pid => pid !== id));
@@ -276,7 +285,8 @@
                                 action: 'delete',
                                 id: id
                             }).toString();
-                            fetch(`${SCRIPT_URL}?${qs}`, { method: 'GET', mode: 'no-cors' });
+                            // 통신 끊김 방지
+                            await fetch(`${SCRIPT_URL}?${qs}`, { method: 'GET', mode: 'no-cors' });
                         } catch (err) { console.error(err); }
                     }
                 }
