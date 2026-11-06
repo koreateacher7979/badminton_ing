@@ -162,8 +162,8 @@
                         const text = await response.text();
                         const rows = parseCSV(text);
                         
-                        // [핵심 필터링] 불러온 데이터의 1행 1열이 '인증번호'라면 잘못 불러온 것이므로 차단
-                        if (rows.length > 0 && rows[0][0] && rows[0][0].includes("인증번호")) {
+                        // [핵심 필터링] 불러온 데이터의 1행 1열이 '인증번호'거나 '클럽명'이면 설정 시트를 잘못 가져온 것이므로 차단
+                        if (rows.length > 0 && rows[0][0] && (rows[0][0].includes("인증번호") || rows[0][0].includes("클럽명"))) {
                             console.warn("오류: 참가자 시트 대신 설정 시트를 불러왔습니다. 동기화를 건너뜁니다.");
                             return;
                         }
@@ -171,14 +171,15 @@
                         const newPlayers = [];
                         // 2행(인덱스 1)부터 데이터 읽기
                         for (let i = 1; i < rows.length; i++) {
-                            // 빈칸 방지 및 이상한 데이터(0330 등) 2차 방어
-                            if (rows[i].length >= 5 && rows[i][0] && !rows[i][0].includes("0330")) {
+                            const rowName = rows[i][0] ? rows[i][0].trim() : "";
+                            // 이름 칸이 비어있지 않고, 이상한 데이터(0330)가 아닐 때만 통과
+                            if (rowName !== "" && rowName !== "이름" && !rowName.includes("0330")) {
                                 newPlayers.push({
-                                    name: rows[i][0],
-                                    age: rows[i][1],
-                                    level: rows[i][2],
-                                    gender: rows[i][3],
-                                    id: rows[i][4] // E열이 고유 ID
+                                    name: rowName,
+                                    age: rows[i][1] || "",
+                                    level: rows[i][2] || "",
+                                    gender: rows[i][3] || "",
+                                    id: rows[i][4] || `sheet-user-${i}` // E열 고유 ID가 비어있어도 임시 ID 생성하여 화면에 띄움
                                 });
                             }
                         }
@@ -214,7 +215,7 @@
                 };
 
                 fetchPlayers(); // 초기 1회 실행
-                const interval = setInterval(fetchPlayers, 2000); // 5초 -> 2초마다 동기화하여 속도 대폭 향상
+                const interval = setInterval(fetchPlayers, 2000); // 2초마다 동기화
                 return () => clearInterval(interval);
             }, [isMobileMode]);
 
